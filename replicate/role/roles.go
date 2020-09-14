@@ -3,11 +3,12 @@ package role
 import (
 	"encoding/json"
 	"fmt"
+	"time"
+
 	"github.com/mittwald/kubernetes-replicator/replicate/common"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
-	"time"
 
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,12 +23,18 @@ type Replicator struct {
 }
 
 // NewReplicator creates a new role replicator
-func NewReplicator(client kubernetes.Interface, resyncPeriod time.Duration, allowAll bool) common.Replicator {
+func NewReplicator(
+	client kubernetes.Interface,
+	resyncPeriod time.Duration,
+	allowAll bool,
+	strict bool,
+) common.Replicator {
 	repl := Replicator{
 		GenericReplicator: common.NewGenericReplicator(common.ReplicatorConfig{
 			Kind:         "Role",
 			ObjType:      &rbacv1.Role{},
 			AllowAll:     allowAll,
+			Strict:       strict,
 			ResyncPeriod: resyncPeriod,
 			Client:       client,
 			ListFunc: func(lo metav1.ListOptions) (runtime.Object, error) {
@@ -65,7 +72,7 @@ func (r *Replicator) ReplicateDataFrom(sourceObj interface{}, targetObj interfac
 	targetVersion, ok := target.Annotations[common.ReplicatedFromVersionAnnotation]
 	sourceVersion := source.ResourceVersion
 
-	if ok && targetVersion == sourceVersion {
+	if ok && targetVersion == sourceVersion && !r.Strict {
 		logger.Debugf("target %s is already up-to-date", common.MustGetKey(target))
 		return nil
 	}

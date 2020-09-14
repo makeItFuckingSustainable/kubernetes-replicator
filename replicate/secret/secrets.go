@@ -3,15 +3,16 @@ package secret
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/mittwald/kubernetes-replicator/replicate/common"
-	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/types"
 	"sort"
 	"strings"
 	"time"
 
-	"k8s.io/api/core/v1"
+	"github.com/mittwald/kubernetes-replicator/replicate/common"
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/types"
+
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
@@ -23,12 +24,18 @@ type Replicator struct {
 }
 
 // NewReplicator creates a new secret replicator
-func NewReplicator(client kubernetes.Interface, resyncPeriod time.Duration, allowAll bool) common.Replicator {
+func NewReplicator(
+	client kubernetes.Interface,
+	resyncPeriod time.Duration,
+	allowAll bool,
+	strict bool,
+) common.Replicator {
 	repl := Replicator{
 		GenericReplicator: common.NewGenericReplicator(common.ReplicatorConfig{
 			Kind:         "Secret",
 			ObjType:      &v1.Secret{},
 			AllowAll:     allowAll,
+			Strict:       strict,
 			ResyncPeriod: resyncPeriod,
 			Client:       client,
 			ListFunc: func(lo metav1.ListOptions) (runtime.Object, error) {
@@ -67,7 +74,7 @@ func (r *Replicator) ReplicateDataFrom(sourceObj interface{}, targetObj interfac
 	targetVersion, ok := target.Annotations[common.ReplicatedFromVersionAnnotation]
 	sourceVersion := source.ResourceVersion
 
-	if ok && targetVersion == sourceVersion {
+	if ok && targetVersion == sourceVersion && !r.Strict {
 		logger.Debugf("target %s is already up-to-date", common.MustGetKey(target))
 		return nil
 	}
