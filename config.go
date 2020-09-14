@@ -10,4 +10,5 @@ type flags struct {
 	AllowAll      bool
 	LogLevel      string
 	LogFormat     string
+	Strict        bool
 }

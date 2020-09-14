@@ -2,14 +2,15 @@ package main
 
 import (
 	"flag"
+	"net/http"
+	"strings"
+	"time"
+
 	"github.com/mittwald/kubernetes-replicator/replicate/common"
 	"github.com/mittwald/kubernetes-replicator/replicate/configmap"
 	"github.com/mittwald/kubernetes-replicator/replicate/role"
 	"github.com/mittwald/kubernetes-replicator/replicate/rolebinding"
 	"github.com/mittwald/kubernetes-replicator/replicate/secret"
-	"net/http"
-	"strings"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -29,6 +30,7 @@ func init() {
 	flag.StringVar(&f.LogLevel, "log-level", "info", "Log level (trace, debug, info, warn, error)")
 	flag.StringVar(&f.LogFormat, "log-format", "plain", "Log format (plain, json)")
 	flag.BoolVar(&f.AllowAll, "allow-all", false, "allow replication of all secrets (CAUTION: only use when you know what you're doing)")
+	flag.BoolVar(&f.Strict, "strict", false, "actively reset reference secrets if they are altered")
 	flag.Parse()
 
 	switch strings.ToUpper(strings.TrimSpace(f.LogLevel)) {
@@ -77,10 +79,10 @@ func main() {
 
 	client = kubernetes.NewForConfigOrDie(config)
 
-	secretRepl := secret.NewReplicator(client, f.ResyncPeriod, f.AllowAll)
-	configMapRepl := configmap.NewReplicator(client, f.ResyncPeriod, f.AllowAll)
-	roleRepl := role.NewReplicator(client, f.ResyncPeriod, f.AllowAll)
-	roleBindingRepl := rolebinding.NewReplicator(client, f.ResyncPeriod, f.AllowAll)
+	secretRepl := secret.NewReplicator(client, f.ResyncPeriod, f.AllowAll, f.Strict)
+	configMapRepl := configmap.NewReplicator(client, f.ResyncPeriod, f.AllowAll, f.Strict)
+	roleRepl := role.NewReplicator(client, f.ResyncPeriod, f.AllowAll, f.Strict)
+	roleBindingRepl := rolebinding.NewReplicator(client, f.ResyncPeriod, f.AllowAll, f.Strict)
 
 	go secretRepl.Run()
 
