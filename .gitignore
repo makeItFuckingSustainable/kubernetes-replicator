@@ -11,3 +11,7 @@
 # Target output
 /replicator/target
 /dist
+
+# vscode config files
+
+/.vscode/**
